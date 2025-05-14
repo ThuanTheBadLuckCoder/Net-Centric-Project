@@ -1,0 +1,52 @@
+[
+	{
+		"id": "goblin",
+		"name": "Goblin",
+		"hp": 100,
+		"attack": 30,
+		"defense": 5,
+		"crit_chance": 0.1,
+		"mana_cost": 2,
+		"description": "Fast and cheap melee unit"
+	},
+	{
+		"id": "archer",
+		"name": "Archer",
+		"hp": 80,
+		"attack": 40,
+		"defense": 3,
+		"crit_chance": 0.15,
+		"mana_cost": 3,
+		"description": "Ranged unit with good damage"
+	},
+	{
+		"id": "knight",
+		"name": "Knight",
+		"hp": 150,
+		"attack": 35,
+		"defense": 10,
+		"crit_chance": 0.05,
+		"mana_cost": 4,
+		"description": "Heavily armored melee unit"
+	},
+	{
+		"id": "wizard",
+		"name": "Wizard",
+		"hp": 70,
+		"attack": 50,
+		"defense": 2,
+		"crit_chance": 0.2,
+		"mana_cost": 5,
+		"description": "High damage magical attacker"
+	},
+	{
+		"id": "dragon",
+		"name": "Dragon",
+		"hp": 200,
+		"attack": 60,
+		"defense": 8,
+		"crit_chance": 0.25,
+		"mana_cost": 8,
+		"description": "Powerful flying unit"
+	}
+]

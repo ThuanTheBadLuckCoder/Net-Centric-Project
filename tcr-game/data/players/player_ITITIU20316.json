@@ -1,0 +1,33 @@
+{
+  "id": "player_ITITIU20316",
+  "username": "ITITIU20316",
+  "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+  "experience": 0,
+  "level": 1,
+  "troop_levels": {
+    "archer": 1,
+    "dragon": 1,
+    "goblin": 1,
+    "knight": 1,
+    "wizard": 1
+  },
+  "tower_levels": {
+    "guard_tower": 1,
+    "king_tower": 1
+  },
+  "stats": {
+    "games_played": 0,
+    "games_won": 0,
+    "games_lost": 0,
+    "games_drawn": 0
+  },
+  "towers": [
+    null,
+    null,
+    null
+  ],
+  "available_troops": [],
+  "mana": 5,
+  "max_mana": 10,
+  "last_mana_update": "2025-05-14T21:52:06.0291364+07:00"
+}

@@ -1,0 +1,18 @@
+{
+	"king_tower": {
+		"name": "King Tower",
+		"hp": 500,
+		"attack": 25,
+		"defense": 15,
+		"crit_chance": 0.1,
+		"description": "The main tower that must be protected"
+	},
+	"guard_tower": {
+		"name": "Guard Tower",
+		"hp": 300,
+		"attack": 20,
+		"defense": 10,
+		"crit_chance": 0.05,
+		"description": "Defensive towers that protect the king"
+	}
+}

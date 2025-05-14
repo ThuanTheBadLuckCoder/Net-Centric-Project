@@ -1,0 +1,29 @@
+
+{
+	"server": {
+		"port": "8080",
+		"read_timeout": 30,
+		"write_timeout": 30,
+		"max_connections": 100
+	},
+	"game": {
+		"simple": {
+			"max_players": 2,
+			"turn_time_seconds": 30
+		},
+		"enhanced": {
+			"game_duration_seconds": 180,
+			"mana_start": 5,
+			"mana_max": 10,
+			"mana_regen_per_second": 1.0,
+			"crit_multiplier": 1.2,
+			"exp_win": 30,
+			"exp_draw": 10
+		}
+	},
+	"database": {
+		"troops_file": "data/troops.json",
+		"towers_file": "data/towers.json",
+		"players_directory": "data/players/"
+	}
+}
