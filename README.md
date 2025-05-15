@@ -4,7 +4,9 @@
 // Project Structure for Tower Castle Rush (TCR) Game
 
 /*
+
 tcr-game/
+
 ├── main.go                    // Entry point
 
 ├── go.mod                     // Go module file
