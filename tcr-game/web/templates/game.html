@@ -1,0 +1,491 @@
+<!-- Game Board Template -->
+<div class="game-container">
+    <!-- Game Header -->
+    <div class="game-header">
+        <div class="player-info">
+            <div class="player player1">
+                <h3 id="player1Name">Player 1</h3>
+                <div class="health-bar">
+                    <div class="health-fill" id="player1Health" style="width: 100%"></div>
+                    <span class="health-text">100/100</span>
+                </div>
+            </div>
+            <div class="game-info">
+                <div class="turn-info">
+                    <span id="currentTurn">Turn 1</span>
+                    <span id="turnTimer">30s</span>
+                </div>
+                <div class="game-mode">
+                    <span id="gameModeName">Simple Mode</span>
+                </div>
+            </div>
+            <div class="player player2">
+                <h3 id="player2Name">Player 2</h3>
+                <div class="health-bar">
+                    <div class="health-fill" id="player2Health" style="width: 100%"></div>
+                    <span class="health-text">100/100</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div class="game-main">
+        <!-- Player 1 Area -->
+        <div class="player-area" id="player1Area">
+            <div class="castle" id="player1Castle">
+                <div class="castle-icon">🏰</div>
+                <div class="castle-health">
+                    <span id="player1CastleHealth">100</span>
+                </div>
+            </div>
+            <div class="tower-grid" id="player1Towers">
+                <!-- Towers will be dynamically generated -->
+            </div>
+            <div class="troop-area" id="player1Troops">
+                <!-- Troops will be dynamically generated -->
+            </div>
+        </div>
+
+        <!-- Battlefield -->
+        <div class="battlefield">
+            <div class="battle-log" id="battleLog">
+                <h4>Battle Log</h4>
+                <div class="log-entries" id="logEntries">
+                    <!-- Battle entries will be added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Player 2 Area -->
+        <div class="player-area" id="player2Area">
+            <div class="castle" id="player2Castle">
+                <div class="castle-icon">🏰</div>
+                <div class="castle-health">
+                    <span id="player2CastleHealth">100</span>
+                </div>
+            </div>
+            <div class="tower-grid" id="player2Towers">
+                <!-- Towers will be dynamically generated -->
+            </div>
+            <div class="troop-area" id="player2Troops">
+                <!-- Troops will be dynamically generated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Panel -->
+    <div class="action-panel">
+        <div class="build-panel">
+            <h3>Build Actions</h3>
+            <div class="action-tabs">
+                <button class="tab-btn active" onclick="switchTab('towers')" id="towersTab">Towers</button>
+                <button class="tab-btn" onclick="switchTab('troops')" id="troopsTab">Troops</button>
+            </div>
+
+            <!-- Tower Building -->
+            <div class="action-content" id="towersContent">
+                <div class="build-options" id="towerOptions">
+                    <!-- Tower options will be loaded dynamically -->
+                </div>
+                <div class="build-controls">
+                    <button class="action-btn" onclick="buildTower()" id="buildTowerBtn" disabled>
+                        Build Tower
+                    </button>
+                    <span class="cost-display" id="towerCost">Cost: -</span>
+                </div>
+            </div>
+
+            <!-- Troop Deployment -->
+            <div class="action-content hidden" id="troopsContent">
+                <div class="build-options" id="troopOptions">
+                    <!-- Troop options will be loaded dynamically -->
+                </div>
+                <div class="build-controls">
+                    <button class="action-btn" onclick="deployTroop()" id="deployTroopBtn" disabled>
+                        Deploy Troop
+                    </button>
+                    <span class="cost-display" id="troopCost">Cost: -</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="resources-panel">
+            <h3>Resources</h3>
+            <div class="resource-item">
+                <span class="resource-label">Gold:</span>
+                <span class="resource-value" id="goldAmount">1000</span>
+            </div>
+            <div class="resource-item">
+                <span class="resource-label">Energy:</span>
+                <span class="resource-value" id="energyAmount">100</span>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="control-btn" onclick="endTurn()" id="endTurnBtn">End Turn</button>
+            <button class="control-btn secondary" onclick="surrenderGame()">Surrender</button>
+            <button class="control-btn secondary" onclick="exitGame()">Exit Game</button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="buildModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Select Build Location</h3>
+            <p>Click on an empty tower slot to build</p>
+            <button onclick="closeModal()" class="btn secondary">Cancel</button>
+        </div>
+    </div>
+
+    <div id="deployModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Select Deployment Zone</h3>
+            <p>Click on your deployment area to place troops</p>
+            <button onclick="closeModal()" class="btn secondary">Cancel</button>
+        </div>
+    </div>
+
+    <div id="gameOverModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="gameOverTitle">Game Over</h2>
+            <p id="gameOverMessage"></p>
+            <div class="modal-buttons">
+                <button onclick="newGame()" class="btn primary">New Game</button>
+                <button onclick="exitGame()" class="btn secondary">Exit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Game board specific JavaScript
+let currentGameId = null;
+let currentPlayer = null;
+let selectedTowerType = null;
+let selectedTroopType = null;
+let buildMode = false;
+let deployMode = false;
+
+// Initialize game board
+function initializeGameBoard(gameId) {
+    currentGameId = gameId;
+    loadGameAssets();
+    setupEventListeners();
+}
+
+// Load game assets (towers, troops, etc.)
+function loadGameAssets() {
+    // Load tower types
+    fetch('/api/towers')
+        .then(response => response.json())
+        .then(towers => {
+            populateTowerOptions(towers);
+        })
+        .catch(error => console.error('Error loading towers:', error));
+
+    // Load troop types
+    fetch('/api/troops')
+        .then(response => response.json())
+        .then(troops => {
+            populateTroopOptions(troops);
+        })
+        .catch(error => console.error('Error loading troops:', error));
+}
+
+// Populate tower building options
+function populateTowerOptions(towers) {
+    const container = document.getElementById('towerOptions');
+    container.innerHTML = '';
+    
+    towers.forEach(tower => {
+        const option = document.createElement('div');
+        option.className = 'build-option';
+        option.dataset.towerType = tower.type;
+        option.innerHTML = `
+            <div class="option-icon">${tower.icon || '🗼'}</div>
+            <div class="option-info">
+                <div class="option-name">${tower.name}</div>
+                <div class="option-cost">💰 ${tower.cost}</div>
+                <div class="option-damage">⚔️ ${tower.damage}</div>
+                <div class="option-range">🏹 ${tower.range}</div>
+            </div>
+        `;
+        option.onclick = () => selectTower(tower);
+        container.appendChild(option);
+    });
+}
+
+// Populate troop deployment options
+function populateTroopOptions(troops) {
+    const container = document.getElementById('troopOptions');
+    container.innerHTML = '';
+    
+    troops.forEach(troop => {
+        const option = document.createElement('div');
+        option.className = 'build-option';
+        option.dataset.troopType = troop.type;
+        option.innerHTML = `
+            <div class="option-icon">${troop.icon || '⚔️'}</div>
+            <div class="option-info">
+                <div class="option-name">${troop.name}</div>
+                <div class="option-cost">💰 ${troop.cost}</div>
+                <div class="option-damage">⚔️ ${troop.damage}</div>
+                <div class="option-health">❤️ ${troop.health}</div>
+            </div>
+        `;
+        option.onclick = () => selectTroop(troop);
+        container.appendChild(option);
+    });
+}
+
+// Tower/Troop selection
+function selectTower(tower) {
+    selectedTowerType = tower;
+    document.querySelectorAll('.build-option').forEach(opt => opt.classList.remove('selected'));
+    document.querySelector(`[data-tower-type="${tower.type}"]`).classList.add('selected');
+    document.getElementById('buildTowerBtn').disabled = false;
+    document.getElementById('towerCost').textContent = `Cost: ${tower.cost}`;
+}
+
+function selectTroop(troop) {
+    selectedTroopType = troop;
+    document.querySelectorAll('.build-option').forEach(opt => opt.classList.remove('selected'));
+    document.querySelector(`[data-troop-type="${troop.type}"]`).classList.add('selected');
+    document.getElementById('deployTroopBtn').disabled = false;
+    document.getElementById('troopCost').textContent = `Cost: ${troop.cost}`;
+}
+
+// Building actions
+function buildTower() {
+    if (!selectedTowerType) return;
+    buildMode = true;
+    showModal('buildModal');
+    document.querySelectorAll('.tower-slot').forEach(slot => {
+        slot.classList.add('highlight');
+        slot.onclick = () => placeTower(slot);
+    });
+}
+
+function deployTroop() {
+    if (!selectedTroopType) return;
+    deployMode = true;
+    showModal('deployModal');
+    document.getElementById('player1Troops').classList.add('deployment-zone');
+}
+
+function placeTower(slot) {
+    if (!buildMode || !selectedTowerType) return;
+    
+    const position = slot.dataset.position;
+    sendMessage({
+        type: 'buildTower',
+        gameId: currentGameId,
+        towerType: selectedTowerType.type,
+        position: position
+    });
+    
+    buildMode = false;
+    closeModal();
+    document.querySelectorAll('.tower-slot').forEach(s => {
+        s.classList.remove('highlight');
+        s.onclick = null;
+    });
+}
+
+// Tab switching
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.action-content').forEach(content => content.classList.add('hidden'));
+    
+    document.getElementById(tab + 'Tab').classList.add('active');
+    document.getElementById(tab + 'Content').classList.remove('hidden');
+}
+
+// Game actions
+function endTurn() {
+    sendMessage({
+        type: 'endTurn',
+        gameId: currentGameId
+    });
+}
+
+function surrenderGame() {
+    if (confirm('Are you sure you want to surrender?')) {
+        sendMessage({
+            type: 'surrender',
+            gameId: currentGameId
+        });
+    }
+}
+
+function exitGame() {
+    if (confirm('Are you sure you want to exit the game?')) {
+        window.location.href = '/';
+    }
+}
+
+// Update game board with new state
+function updateGameBoard(gameState) {
+    if (!gameState) return;
+    
+    // Update player info
+    document.getElementById('player1Name').textContent = gameState.players[0].name;
+    document.getElementById('player2Name').textContent = gameState.players[1].name;
+    
+    // Update health bars
+    updateHealthBar('player1', gameState.players[0].health, gameState.players[0].maxHealth);
+    updateHealthBar('player2', gameState.players[1].health, gameState.players[1].maxHealth);
+    
+    // Update castle health
+    document.getElementById('player1CastleHealth').textContent = gameState.players[0].castleHealth;
+    document.getElementById('player2CastleHealth').textContent = gameState.players[1].castleHealth;
+    
+    // Update resources
+    const currentPlayerData = gameState.players.find(p => p.id === currentPlayer);
+    if (currentPlayerData) {
+        document.getElementById('goldAmount').textContent = currentPlayerData.gold || 1000;
+        document.getElementById('energyAmount').textContent = currentPlayerData.energy || 100;
+    }
+    
+    // Update turn info
+    document.getElementById('currentTurn').textContent = `Turn ${gameState.turn}`;
+    document.getElementById('gameModeName').textContent = gameState.mode === 'simple' ? 'Simple Mode' : 'Enhanced Mode';
+    
+    // Update towers
+    updateTowers(gameState);
+    
+    // Update troops
+    updateTroops(gameState);
+    
+    // Update battle log
+    updateBattleLog(gameState.battleLog);
+    
+    // Check for game over
+    if (gameState.gameOver) {
+        showGameOver(gameState.winner);
+    }
+}
+
+function updateHealthBar(player, current, max) {
+    const percentage = (current / max) * 100;
+    document.getElementById(player + 'Health').style.width = percentage + '%';
+    document.querySelector(`#${player}Health`).parentNode.querySelector('.health-text').textContent = `${current}/${max}`;
+}
+
+function updateTowers(gameState) {
+    // Implementation for updating tower display
+    gameState.players.forEach((player, index) => {
+        const towerGrid = document.getElementById(`player${index + 1}Towers`);
+        // Clear existing towers
+        towerGrid.innerHTML = '';
+        
+        // Create tower slots
+        for (let i = 0; i < 6; i++) { // Assuming 6 tower slots
+            const slot = document.createElement('div');
+            slot.className = 'tower-slot';
+            slot.dataset.position = i;
+            
+            const tower = player.towers && player.towers[i];
+            if (tower) {
+                slot.innerHTML = `
+                    <div class="tower ${tower.type}">
+                        <div class="tower-icon">${tower.icon || '🗼'}</div>
+                        <div class="tower-level">Lv${tower.level}</div>
+                    </div>
+                `;
+                slot.classList.add('occupied');
+            }
+            
+            towerGrid.appendChild(slot);
+        }
+    });
+}
+
+function updateTroops(gameState) {
+    // Implementation for updating troop display
+    gameState.players.forEach((player, index) => {
+        const troopArea = document.getElementById(`player${index + 1}Troops`);
+        troopArea.innerHTML = '';
+        
+        if (player.troops) {
+            player.troops.forEach(troop => {
+                const troopElement = document.createElement('div');
+                troopElement.className = 'troop';
+                troopElement.innerHTML = `
+                    <div class="troop-icon">${troop.icon || '⚔️'}</div>
+                    <div class="troop-count">${troop.count}</div>
+                `;
+                troopArea.appendChild(troopElement);
+            });
+        }
+    });
+}
+
+function updateBattleLog(battleLog) {
+    const logEntries = document.getElementById('logEntries');
+    if (battleLog && battleLog.length > 0) {
+        logEntries.innerHTML = '';
+        battleLog.slice(-10).forEach(entry => { // Show last 10 entries
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = entry;
+            logEntries.appendChild(logEntry);
+        });
+        logEntries.scrollTop = logEntries.scrollHeight;
+    }
+}
+
+function showGameOver(winner) {
+    document.getElementById('gameOverTitle').textContent = winner ? `${winner} Wins!` : 'Game Over';
+    document.getElementById('gameOverMessage').textContent = winner ? 
+        `Congratulations to ${winner}!` : 'The game has ended.';
+    showModal('gameOverModal');
+}
+
+// Modal functions
+function showModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+}
+
+function closeModal() {
+    document.querySelectorAll('.modal').forEach(modal => modal.classList.add('hidden'));
+    buildMode = false;
+    deployMode = false;
+    document.querySelectorAll('.tower-slot').forEach(slot => {
+        slot.classList.remove('highlight');
+        slot.onclick = null;
+    });
+    document.getElementById('player1Troops').classList.remove('deployment-zone');
+}
+
+function newGame() {
+    window.location.href = '/';
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Close modals when clicking outside
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        };
+    });
+    
+    // Troop deployment
+    document.getElementById('player1Troops').onclick = (e) => {
+        if (deployMode && selectedTroopType) {
+            sendMessage({
+                type: 'deployTroop',
+                gameId: currentGameId,
+                troopType: selectedTroopType.type,
+                position: { x: e.offsetX, y: e.offsetY }
+            });
+            deployMode = false;
+            closeModal();
+        }
+    };
+}
+</script>
