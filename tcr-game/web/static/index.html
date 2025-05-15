@@ -460,6 +460,22 @@
             font-size: 16px;
         }
 
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .game-header {
@@ -547,6 +563,7 @@
                     <div class="player-info">
                         <span id="current-turn">Turn: Player 1</span>
                         <span id="player-mana">Mana: 5/10</span>
+                        <span id="user-timeout">Timeout: <span id="timeout-counter">30</span>s</span>
                     </div>
                 </div>
 
@@ -589,30 +606,9 @@
                 </div>
 
                 <div class="troops-panel">
-                    <h3>Your Troops</h3>
+                    <h3>Your Troops <span id="troops-loading" class="loading hidden"></span></h3>
                     <div id="troops-list" class="troops-grid">
-                        <!-- Demo troops for testing -->
-                        <div class="troop-card" data-troop-id="knight">
-                            <div class="troop-name">Knight</div>
-                            <div class="troop-stats">
-                                HP: 100/100<br>
-                                ATK: 45 DEF: 25
-                            </div>
-                        </div>
-                        <div class="troop-card" data-troop-id="archer">
-                            <div class="troop-name">Archer</div>
-                            <div class="troop-stats">
-                                HP: 75/75<br>
-                                ATK: 35 DEF: 15
-                            </div>
-                        </div>
-                        <div class="troop-card" data-troop-id="wizard">
-                            <div class="troop-name">Wizard</div>
-                            <div class="troop-stats">
-                                HP: 60/60<br>
-                                ATK: 55 DEF: 10
-                            </div>
-                        </div>
+                        <!-- Troops will be loaded dynamically from the database -->
                     </div>
                 </div>
 
@@ -640,7 +636,6 @@
     </div>
 
     <script>
-        // Fixed JavaScript code with better event handling
         class TCRGame {
             constructor() {
                 this.wsConnection = null;
@@ -650,45 +645,245 @@
                 this.selectedTroop = null;
                 this.selectedTower = null;
                 this.gameState = null;
+                this.turnTimeoutId = null;
+                this.turnTimeLeft = 30; // 30 seconds per turn
+                this.turnTimerInterval = null;
                 
                 this.initEventListeners();
                 this.showScreen('game-screen'); // Skip to game screen for testing
-                this.setupDemoState();
+                this.loadTroopsFromDatabase();
             }
 
-            setupDemoState() {
-                // Demo state for testing UI
-                this.playerId = 'player1';
-                this.gameState = {
-                    mode: 'simple',
-                    current_player: { id: 'player1' },
-                    players: [
-                        {
-                            id: 'player1',
-                            username: 'You',
-                            towers: [
-                                { hp: 300, max_hp: 300, alive: true },
-                                { hp: 300, max_hp: 300, alive: true },
-                                { hp: 500, max_hp: 500, alive: true }
-                            ],
-                            troops: [
-                                { id: 'knight', name: 'Knight', hp: 100, max_hp: 100, attack: 45, defense: 25, alive: true },
-                                { id: 'archer', name: 'Archer', hp: 75, max_hp: 75, attack: 35, defense: 15, alive: true },
-                                { id: 'wizard', name: 'Wizard', hp: 60, max_hp: 60, attack: 55, defense: 10, alive: true }
-                            ]
-                        },
-                        {
-                            id: 'player2',
-                            username: 'Opponent',
-                            towers: [
-                                { hp: 300, max_hp: 300, alive: true },
-                                { hp: 300, max_hp: 300, alive: true },
-                                { hp: 500, max_hp: 500, alive: true }
-                            ]
+            // NEW: Load troops dynamically from database
+            async loadTroopsFromDatabase() {
+                try {
+                    // Show loading indicator
+                    document.getElementById('troops-loading').classList.remove('hidden');
+                    
+                    // In a real implementation, this would call your backend API
+                    // For demo purposes, we're simulating an API call
+                    const response = await this.simulateDatabaseCall();
+                    
+                    // Clear existing hardcoded troops
+                    const troopsContainer = document.getElementById('troops-list');
+                    troopsContainer.innerHTML = '';
+                    
+                    // Dynamically create troop cards from database data
+                    response.forEach(troop => {
+                        this.createTroopCard(troop, troopsContainer);
+                    });
+                    
+                    // Hide loading indicator
+                    document.getElementById('troops-loading').classList.add('hidden');
+                    
+                    console.log('Troops loaded successfully from database');
+                } catch (error) {
+                    console.error('Failed to load troops:', error);
+                    this.addLogEntry('Failed to load troops from database', 'error');
+                    document.getElementById('troops-loading').classList.add('hidden');
+                }
+            }
+
+            // Simulate database call - replace with actual API call
+            async simulateDatabaseCall() {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve([
+                            {
+                                "id": "goblin",
+                                "name": "Goblin",
+                                "hp": 100,
+                                "attack": 30,
+                                "defense": 5,
+                                "crit_chance": 0.1,
+                                "mana_cost": 2,
+                                "description": "Fast and cheap melee unit"
+                            },
+                            {
+                                "id": "archer",
+                                "name": "Archer",
+                                "hp": 80,
+                                "attack": 40,
+                                "defense": 3,
+                                "crit_chance": 0.15,
+                                "mana_cost": 3,
+                                "description": "Ranged unit with good damage"
+                            },
+                            {
+                                "id": "knight",
+                                "name": "Knight",
+                                "hp": 150,
+                                "attack": 35,
+                                "defense": 10,
+                                "crit_chance": 0.05,
+                                "mana_cost": 4,
+                                "description": "Heavily armored melee unit"
+                            },
+                            {
+                                "id": "wizard",
+                                "name": "Wizard",
+                                "hp": 70,
+                                "attack": 50,
+                                "defense": 2,
+                                "crit_chance": 0.2,
+                                "mana_cost": 5,
+                                "description": "High damage magical attacker"
+                            },
+                            {
+                                "id": "dragon",
+                                "name": "Dragon",
+                                "hp": 200,
+                                "attack": 60,
+                                "defense": 8,
+                                "crit_chance": 0.25,
+                                "mana_cost": 8,
+                                "description": "Powerful flying unit"
+                            }
+                        ]);
+                    }, 1000); // Simulate network delay
+                });
+            }
+
+            // NEW: Create troop card dynamically
+            createTroopCard(troop, container) {
+                const troopCard = document.createElement('div');
+                troopCard.className = 'troop-card';
+                troopCard.dataset.troopId = troop.id;
+                
+                troopCard.innerHTML = `
+                    <div class="troop-name">${troop.name}</div>
+                    <div class="troop-stats">
+                        HP: ${troop.hp}/${troop.hp}<br>
+                        ATK: ${troop.attack} DEF: ${troop.defense}<br>
+                        <span class="troop-mana">Mana: ${troop.mana_cost}</span><br>
+                        <small>${troop.description}</small>
+                    </div>
+                `;
+                
+                container.appendChild(troopCard);
+                
+                // Add click event listener
+                troopCard.addEventListener('click', () => {
+                    if (!troopCard.classList.contains('used')) {
+                        this.selectTroop(troop.id);
+                    }
+                });
+            }
+
+            // NEW: User timeout system
+            startTurnTimer() {
+                this.turnTimeLeft = 30; // Reset to 30 seconds
+                this.updateTimeoutDisplay();
+                
+                // Clear any existing timer
+                if (this.turnTimerInterval) {
+                    clearInterval(this.turnTimerInterval);
+                }
+                
+                // Start countdown
+                this.turnTimerInterval = setInterval(() => {
+                    this.turnTimeLeft--;
+                    this.updateTimeoutDisplay();
+                    
+                    // Warn user when time is running out
+                    if (this.turnTimeLeft === 10) {
+                        this.addLogEntry('Warning: 10 seconds remaining!', 'error');
+                    }
+                    
+                    // Auto-end turn when time runs out
+                    if (this.turnTimeLeft <= 0) {
+                        this.handleTurnTimeout();
+                    }
+                }, 1000);
+            }
+
+            updateTimeoutDisplay() {
+                const timeoutElement = document.getElementById('timeout-counter');
+                if (timeoutElement) {
+                    timeoutElement.textContent = this.turnTimeLeft;
+                    
+                    // Change color as time runs out
+                    if (this.turnTimeLeft <= 10) {
+                        timeoutElement.style.color = '#ff4444';
+                    } else if (this.turnTimeLeft <= 20) {
+                        timeoutElement.style.color = '#ffa500';
+                    } else {
+                        timeoutElement.style.color = '#ffffff';
+                    }
+                }
+            }
+
+            handleTurnTimeout() {
+                this.addLogEntry('Turn timed out! Auto-ending turn...', 'error');
+                this.clearSelections();
+                this.endTurn();
+            }
+
+            stopTurnTimer() {
+                if (this.turnTimerInterval) {
+                    clearInterval(this.turnTimerInterval);
+                    this.turnTimerInterval = null;
+                }
+            }
+
+            // Modified endTurn method to include timer management
+            endTurn() {
+                this.stopTurnTimer();
+                
+                if (this.gameState && this.gameState.current_player && this.gameState.current_player.id === this.playerId) {
+                    // Switch turns
+                    this.gameState.current_player = this.gameState.players.find(p => p.id !== this.playerId);
+                    this.updateGameState(this.gameState);
+                    this.addLogEntry('Turn ended');
+                    console.log('Turn ended');
+                }
+            }
+
+            // Modified updateGameState to start timer for player's turn
+            updateGameState(gameState) {
+                this.gameState = gameState;
+                
+                // Stop any existing timer
+                this.stopTurnTimer();
+                
+                // Update game info
+                document.getElementById('game-mode').textContent = `Mode: ${gameState.mode}`;
+                
+                // Update players
+                if (gameState.players && gameState.players.length >= 2) {
+                    const player = gameState.players.find(p => p.id === this.playerId);
+                    const opponent = gameState.players.find(p => p.id !== this.playerId);
+                    
+                    if (player && opponent) {
+                        document.getElementById('player-name').textContent = `You (${player.username})`;
+                        document.getElementById('opponent-name').textContent = opponent.username;
+                        
+                        this.updateTowers(player.towers, 'player');
+                        this.updateTowers(opponent.towers, 'opp');
+                        this.updateTroops(player.troops);
+                        
+                        if (gameState.current_player) {
+                            const isMyTurn = gameState.current_player.id === this.playerId;
+                            document.getElementById('current-turn').textContent = 
+                                `Turn: ${isMyTurn ? 'Your Turn' : gameState.current_player.username}`;
+                            
+                            // Enable/disable buttons based on turn
+                            const attackBtn = document.getElementById('attack-btn');
+                            const endTurnBtn = document.getElementById('end-turn-btn');
+                            
+                            if (!isMyTurn) {
+                                attackBtn.disabled = true;
+                                endTurnBtn.disabled = true;
+                                attackBtn.textContent = "Wait for your turn";
+                            } else {
+                                endTurnBtn.disabled = false;
+                                this.updateAttackButton();
+                                // Start timer for player's turn
+                                this.startTurnTimer();
+                            }
                         }
-                    ]
-                };
-                this.updateGameState(this.gameState);
+                    }
+                }
             }
 
             initEventListeners() {
@@ -701,7 +896,7 @@
                 document.getElementById('create-enhanced-btn').addEventListener('click', () => this.createGame('enhanced'));
                 document.getElementById('join-game-btn').addEventListener('click', () => this.joinGame());
                 
-                // Game actions - These were the missing bindings!
+                // Game actions
                 document.getElementById('attack-btn').addEventListener('click', () => this.attack());
                 document.getElementById('end-turn-btn').addEventListener('click', () => this.endTurn());
                 document.getElementById('new-game-btn').addEventListener('click', () => this.newGame());
@@ -723,17 +918,6 @@
                         tower.addEventListener('click', () => this.selectTower(i));
                     }
                 }
-
-                // Add troop click events
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('.troop-card')) {
-                        const troopCard = e.target.closest('.troop-card');
-                        const troopId = troopCard.dataset.troopId;
-                        if (troopId && !troopCard.classList.contains('used')) {
-                            this.selectTroop(troopId);
-                        }
-                    }
-                });
             }
 
             showScreen(screenId) {
@@ -775,6 +959,36 @@
                 this.showScreen('game-screen');
                 this.showStatus(`Demo game created: ${this.gameId}`, 'success');
                 console.log('Demo game created:', mode);
+                
+                // Initialize demo game state with current player
+                this.playerId = 'player1';
+                this.gameState = {
+                    mode: mode,
+                    current_player: { id: 'player1' },
+                    players: [
+                        {
+                            id: 'player1',
+                            username: 'You',
+                            towers: [
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 500, max_hp: 500, alive: true }
+                            ]
+                        },
+                        {
+                            id: 'player2',
+                            username: 'Opponent',
+                            towers: [
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 500, max_hp: 500, alive: true }
+                            ]
+                        }
+                    ]
+                };
+                this.updateGameState(this.gameState);
+                // Load troops after game is created
+                await this.loadTroopsFromDatabase();
             }
 
             async joinGame() {
@@ -786,47 +1000,36 @@
                 this.gameId = gameId;
                 this.showScreen('game-screen');
                 console.log('Demo join game:', gameId);
-            }
-
-            updateGameState(gameState) {
-                this.gameState = gameState;
                 
-                // Update game info
-                document.getElementById('game-mode').textContent = `Mode: ${gameState.mode}`;
-                
-                // Update players
-                if (gameState.players && gameState.players.length >= 2) {
-                    const player = gameState.players.find(p => p.id === this.playerId);
-                    const opponent = gameState.players.find(p => p.id !== this.playerId);
-                    
-                    if (player && opponent) {
-                        document.getElementById('player-name').textContent = `You (${player.username})`;
-                        document.getElementById('opponent-name').textContent = opponent.username;
-                        
-                        this.updateTowers(player.towers, 'player');
-                        this.updateTowers(opponent.towers, 'opp');
-                        this.updateTroops(player.troops);
-                        
-                        if (gameState.current_player) {
-                            const isMyTurn = gameState.current_player.id === this.playerId;
-                            document.getElementById('current-turn').textContent = 
-                                `Turn: ${isMyTurn ? 'Your Turn' : gameState.current_player.username}`;
-                            
-                            // Enable/disable buttons based on turn
-                            const attackBtn = document.getElementById('attack-btn');
-                            const endTurnBtn = document.getElementById('end-turn-btn');
-                            
-                            if (!isMyTurn) {
-                                attackBtn.disabled = true;
-                                endTurnBtn.disabled = true;
-                                attackBtn.textContent = "Wait for your turn";
-                            } else {
-                                endTurnBtn.disabled = false;
-                                this.updateAttackButton();
-                            }
+                // Initialize demo game state for joined player
+                this.playerId = 'player2';
+                this.gameState = {
+                    mode: 'simple',
+                    current_player: { id: 'player1' },
+                    players: [
+                        {
+                            id: 'player1',
+                            username: 'Opponent',
+                            towers: [
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 500, max_hp: 500, alive: true }
+                            ]
+                        },
+                        {
+                            id: 'player2',
+                            username: 'You',
+                            towers: [
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 300, max_hp: 300, alive: true },
+                                { hp: 500, max_hp: 500, alive: true }
+                            ]
                         }
-                    }
-                }
+                    ]
+                };
+                this.updateGameState(this.gameState);
+                // Load troops after joining game
+                await this.loadTroopsFromDatabase();
             }
 
             updateTowers(towers, prefix) {
@@ -997,16 +1200,6 @@
                 this.updateAttackButton();
             }
 
-            endTurn() {
-                if (this.gameState && this.gameState.current_player && this.gameState.current_player.id === this.playerId) {
-                    // Switch turns
-                    this.gameState.current_player = this.gameState.players.find(p => p.id !== this.playerId);
-                    this.updateGameState(this.gameState);
-                    this.addLogEntry('Turn ended');
-                    console.log('Turn ended');
-                }
-            }
-
             addLogEntry(text, type = '') {
                 const logContent = document.getElementById('log-content');
                 const entry = document.createElement('div');
@@ -1022,6 +1215,9 @@
             }
 
             handleGameEnd(message) {
+                // Stop any running timers when game ends
+                this.stopTurnTimer();
+                
                 const resultEl = document.getElementById('game-result');
                 const statsEl = document.getElementById('game-stats');
                 
@@ -1041,6 +1237,9 @@
             }
 
             newGame() {
+                // Stop timers
+                this.stopTurnTimer();
+                
                 this.gameId = null;
                 this.selectedTroop = null;
                 this.selectedTower = null;
@@ -1057,6 +1256,9 @@
                     el.classList.remove('destroyed');
                 });
                 
+                // Clear troops container to reload fresh ones
+                document.getElementById('troops-list').innerHTML = '';
+                
                 this.showScreen('game-lobby');
                 console.log('New game - returned to lobby');
             }
@@ -1065,8 +1267,5 @@
         // Initialize game when page loads
         document.addEventListener('DOMContentLoaded', () => {
             window.game = new TCRGame();
-            console.log('Game initialized');
+            console.log('Game initialized with dynamic troops and timeout system');
         });
-    </script>
-</body>
-</html>
