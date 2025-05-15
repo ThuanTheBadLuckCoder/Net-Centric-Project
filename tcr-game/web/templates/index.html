@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower Castle Rush</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Tower Castle Rush</h1>
+            <div class="game-status">
+                <span id="connectionStatus">Disconnected</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Game Mode Selection -->
+            <div id="gameModeSelection" class="card">
+                <h2>Select Game Mode</h2>
+                <div class="mode-buttons">
+                    <button onclick="selectMode('simple')" class="mode-btn" id="simpleMode">
+                        <h3>Simple Mode</h3>
+                        <p>Basic tower defense gameplay</p>
+                    </button>
+                    <button onclick="selectMode('enhanced')" class="mode-btn" id="enhancedMode">
+                        <h3>Enhanced Mode</h3>
+                        <p>Advanced features with special abilities</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Player Setup -->
+            <div id="playerSetup" class="card hidden">
+                <h2>Player Setup</h2>
+                <form id="playerForm">
+                    <div class="form-group">
+                        <label for="playerName">Player Name:</label>
+                        <input type="text" id="playerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="gameMode">Game Mode:</label>
+                        <select id="gameMode" disabled>
+                            <option value="simple">Simple Mode</option>
+                            <option value="enhanced">Enhanced Mode</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" onclick="createGame()" class="btn primary">Create Game</button>
+                        <button type="button" onclick="joinGame()" class="btn secondary">Join Game</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Join Game -->
+            <div id="joinGameSection" class="card hidden">
+                <h2>Join Existing Game</h2>
+                <div class="form-group">
+                    <label for="gameId">Game ID:</label>
+                    <input type="text" id="gameId" placeholder="Enter game ID">
+                </div>
+                <div class="button-group">
+                    <button onclick="connectToGame()" class="btn primary">Connect</button>
+                    <button onclick="showPlayerSetup()" class="btn secondary">Back</button>
+                </div>
+            </div>
+
+            <!-- Game Created -->
+            <div id="gameCreated" class="card hidden">
+                <h2>Game Created</h2>
+                <p>Share this Game ID with your opponent:</p>
+                <div class="game-id-display">
+                    <span id="newGameId"></span>
+                    <button onclick="copyGameId()" class="btn small">Copy</button>
+                </div>
+                <p>Waiting for opponent to join...</p>
+                <div class="spinner"></div>
+                <button onclick="cancelGame()" class="btn secondary">Cancel</button>
+            </div>
+
+            <!-- Game Board (will be loaded from game.html) -->
+            <div id="gameBoard" class="hidden">
+                <!-- Game board content will be loaded here -->
+            </div>
+        </main>
+
+        <!-- Error Messages -->
+        <div id="errorMessages" class="error-container hidden">
+            <div class="error-message">
+                <span id="errorText"></span>
+                <button onclick="hideError()" class="close-btn">&times;</button>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="overlay hidden">
+            <div class="loading-content">
+                <div class="spinner large"></div>
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/scripts.js"></script>
+    <script>
+        // WebSocket connection
+        let ws = null;
+        let gameState = null;
+        let selectedMode = null;
+
+        // Initialize the game
+        function init() {
+            updateConnectionStatus('Connecting...');
+            connectWebSocket();
+        }
+
+        // Connect to WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                updateConnectionStatus('Connected');
+                showGameModeSelection();
+            };
+            
+            ws.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                handleMessage(message);
+            };
+            
+            ws.onclose = function() {
+                updateConnectionStatus('Disconnected');
+                setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus('Error');
+            };
+        }
+
+        // Handle incoming messages
+        function handleMessage(message) {
+            switch(message.type) {
+                case 'gameCreated':
+                    document.getElementById('newGameId').textContent = message.gameId;
+                    showSection('gameCreated');
+                    break;
+                case 'gameJoined':
+                    loadGameBoard(message.gameId);
+                    break;
+                case 'playerJoined':
+                    if (message.players && message.players.length === 2) {
+                        loadGameBoard(message.gameId);
+                    }
+                    break;
+                case 'gameStateUpdate':
+                    gameState = message.gameState;
+                    updateGameBoard(gameState);
+                    break;
+                case 'error':
+                    showError(message.message);
+                    break;
+            }
+        }
+
+        // Send message to server
+        function sendMessage(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(message));
+            }
+        }
+
+        // UI Functions
+        function selectMode(mode) {
+            selectedMode = mode;
+            document.getElementById('gameMode').value = mode;
+            showPlayerSetup();
+        }
+
+        function showPlayerSetup() {
+            showSection('playerSetup');
+        }
+
+        function createGame() {
+            const playerName = document.getElementById('playerName').value;
+            if (!playerName.trim()) {
+                showError('Please enter your name');
+                return;
+            }
+            
+            sendMessage({
+                type: 'createGame',
+                mode: selectedMode,
+                playerName: playerName
+            });
+        }
+
+        function joinGame() {
+            const playerName = document.getElementById('playerName').value;
+            if (!playerName.trim()) {
+                showError('Please enter your name');
+                return;
+            }
+            showSection('joinGameSection');
+        }
+
+        function connectToGame() {
+            const gameId = document.getElementById('gameId').value;
+            const playerName = document.getElementById('playerName').value;
+            
+            if (!gameId.trim()) {
+                showError('Please enter a game ID');
+                return;
+            }
+            
+            sendMessage({
+                type: 'joinGame',
+                gameId: gameId,
+                playerName: playerName
+            });
+        }
+
+        function cancelGame() {
+            sendMessage({
+                type: 'cancelGame'
+            });
+            showGameModeSelection();
+        }
+
+        function loadGameBoard(gameId) {
+            showLoading(true);
+            fetch('/game')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('gameBoard').innerHTML = html;
+                    showSection('gameBoard');
+                    initializeGameBoard(gameId);
+                    showLoading(false);
+                })
+                .catch(error => {
+                    console.error('Error loading game board:', error);
+                    showError('Failed to load game board');
+                    showLoading(false);
+                });
+        }
+
+        // Utility functions
+        function showSection(sectionId) {
+            const sections = ['gameModeSelection', 'playerSetup', 'joinGameSection', 'gameCreated', 'gameBoard'];
+            sections.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.classList.toggle('hidden', id !== sectionId);
+                }
+            });
+        }
+
+        function showGameModeSelection() {
+            selectedMode = null;
+            document.getElementById('playerName').value = '';
+            document.getElementById('gameId').value = '';
+            showSection('gameModeSelection');
+        }
+
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.textContent = status;
+            statusElement.className = status.toLowerCase().replace(/[^a-z]/g, '');
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('errorMessages').classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorMessages').classList.add('hidden');
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+        }
+
+        function copyGameId() {
+            const gameId = document.getElementById('newGameId').textContent;
+            navigator.clipboard.writeText(gameId).then(() => {
+                // You could show a toast message here
+                console.log('Game ID copied to clipboard');
+            });
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
