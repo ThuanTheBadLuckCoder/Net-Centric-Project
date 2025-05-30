@@ -38,11 +38,10 @@ Tower Castle Rush is a multiplayer tower defense game demonstrating client-serve
                                                        │
                                ┌───────────────────────▼────────────────────────┐
                                │  Concurrent Game Engine                        │
-                               │  ┌─────────┐ ┌─────────┐ ┌─────────┐          │
-                               │  │ Game 1  │ │ Game 2  │ │ Game N  │          │
-                               │  │ P1 ◄──► │ │ P3 ◄──► │ │ ... ... │          │
-                               │  │    P2   │ │    P4   │ │         │          │
-                               │  └─────────┘ └─────────┘ └─────────┘          │
+                               │  ┌────────────┐ ┌────────────┐ ┌─────────┐     │
+                               │  │ Game 1     │ │ Game 2     │ │ Game N  │     │
+                               │  │ P1 ◄──► P2 │ │ P3 ◄──► P4 │ │ ... ... │     │
+                               │  └────────────┘ └────────────┘ └─────────┘     │
                                └────────────────────────────────────────────────┘
 ```
 
@@ -83,23 +82,23 @@ Main Server Thread
 
 #### Connection Sequence Diagram
 ```
-Client                     Server
-  │                         │
+Client                      Server
+  │                          │
   │── TCP Connect :8080 ────►│
-  │◄── Welcome Message ─────│
-  │                         │
+  │◄── Welcome Message ──────│
+  │                          │
   │── "alice mypassword" ───►│
-  │◄── "SUCCESS: Welcome" ──│
-  │                         │
+  │◄── "SUCCESS: Welcome" ───│
+  │                          │
   │── "SIMPLE" ─────────────►│
-  │◄── "MODE_SELECTED" ─────│
-  │                         │
-  │◄── "WAITING..." ────────│
-  │◄── "GAME_START" ────────│
-  │                         │
+  │◄── "MODE_SELECTED" ──────│
+  │                          │
+  │◄── "WAITING..." ─────────│
+  │◄── "GAME_START" ─────────│
+  │                          │
   │── "DEPLOY Pawn" ────────►│
-  │◄── "Deployed Pawn_L1" ──│
-  │◄── "YOUR_TURN|..." ─────│
+  │◄── "Deployed Pawn_L1" ───│
+  │◄── "YOUR_TURN|..." ──────│
 ```
 
 #### Message Flow State Machine
@@ -111,12 +110,12 @@ Client                     Server
      │                        │    ▲
      └──new_game──────────────┘    │
                                    │
-                           ┌───────┴───────┐
+                           ┌───────┴────────┐
                            │ Handle Commands│
                            │ - DEPLOY       │
                            │ - SURRENDER    │
                            │ - help         │
-                           └───────────────┘
+                           └────────────────┘
 ```
 
 ### WebSocket Protocol Flow (Web Client)
@@ -126,7 +125,7 @@ Client                     Server
 Browser                                Server
    │                                     │
    │──── WebSocket Handshake ───────────►│
-   │◄─── 101 Switching Protocols ───────│
+   │◄─── 101 Switching Protocols ────────│
    │                                     │
    │──── {"type":"createGame"} ─────────►│
    │◄─── {"type":"gameCreated"} ─────────│
@@ -136,8 +135,8 @@ Browser                                Server
    │──── {"type":"deployTroop"} ────────►│
    │◄─── {"type":"gameStateUpdate"} ─────│
    │                                     │
-   └──── Real-time State Sync ─────────►│
-   ◄──── Every 2 seconds ───────────────┘
+   └──── Real-time State Sync ──────────►│
+   ◄──── Every 2 seconds ────────────────┘
 ```
 
 #### JSON Message Structure Visualization
@@ -261,27 +260,27 @@ Game Start (3 minute timer)
          │
          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                Real-time Event Loop                        │
+│                Real-time Event Loop                         │
 │                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │ Mana Regen  │  │ Auto Deploy │  │ Combat      │        │
-│  │ Every 1s    │  │ Every 15s   │  │ Every 2s    │        │
-│  └─────────────┘  └─────────────┘  └─────────────┘        │
-│         │                │                │                │
-│         ▼                ▼                ▼                │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │ +1 Mana     │  │ Smart Troop │  │ Troops ──►  │        │
-│  │ (max 10)    │  │ Selection   │  │ Towers      │        │
-│  └─────────────┘  └─────────────┘  └─────────────┘        │
-│                                           │                │
-│         ┌─────────────────────────────────┘                │
-│         │ async                                            │
-│         ▼                                                  │
-│  ┌─────────────┐                                          │
-│  │ Player      │                                          │
-│  │ Commands    │                                          │
-│  │ (anytime)   │                                          │
-│  └─────────────┘                                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │ Mana Regen  │  │ Auto Deploy │  │ Combat      │          │
+│  │ Every 1s    │  │ Every 15s   │  │ Every 2s    │          │
+│  └─────────────┘  └─────────────┘  └─────────────┘          │
+│         │                │                │                 │
+│         ▼                ▼                ▼                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │ +1 Mana     │  │ Smart Troop │  │ Troops ──►  │          │
+│  │ (max 10)    │  │ Selection   │  │ Towers      │          │
+│  └─────────────┘  └─────────────┘  └─────────────┘          │
+│                                           │                 │
+│         ┌─────────────────────────────────┘                 │
+│         │ async                                             │
+│         ▼                                                   │
+│  ┌─────────────┐                                            │
+│  │ Player      │                                            │
+│  │ Commands    │                                            │
+│  │ (anytime)   │                                            │
+│  └─────────────┘                                            │
 └─────────────────────────────────────────────────────────────┘
          │
          ▼
@@ -489,12 +488,12 @@ WebSocket Connection
 └─────┬───────────┘
       │
       ├── onopen ──────────► Connection Established
-      │                     │
+      │                       │
       ├── onmessage ────────► ┌─────────────────┐
-      │                      │ Parse JSON      │
-      │                      │ Update UI       │
-      │                      │ Handle Events   │
-      │                      └─────────────────┘
+      │                       │ Parse JSON      │
+      │                       │ Update UI       │
+      │                       │ Handle Events   │
+      │                       └─────────────────┘
       │
       ├── onclose ─────────► ┌─────────────────┐
       │                      │ Reconnection    │
@@ -527,7 +526,7 @@ Normal Operation
       │
       ▼
 ┌─────────────────┐    Retry 1    ┌─────────────────┐
-│ Attempt         │──────────────►│ Wait 3 seconds │
+│ Attempt         │──────────────►│ Wait 3 seconds  │
 │ Reconnection    │◄──────────────│ Exponential     │
 └─────┬───────────┘    Failed     │ Backoff         │
       │                           └─────────────────┘
